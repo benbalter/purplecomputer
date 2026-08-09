@@ -132,6 +132,11 @@ main() {
     # the default signed generic ISO for PC hardware is untouched.
     if [ "${PURPLE_T2:-0}" = "1" ]; then
         log_info "PURPLE_T2=1: installing t2linux kernel for Apple T2 Macs"
+        # minbase has no CA certs and the t2 repo is HTTPS (GitHub), so apt can't
+        # verify the TLS cert without this. Base Ubuntu repos are plain HTTP, so
+        # this install itself works before certs are present.
+        chroot "$MOUNT_DIR" apt-get update
+        chroot "$MOUNT_DIR" apt-get install -y ca-certificates
         echo 'deb [trusted=yes] https://github.com/AdityaGarg8/t2-ubuntu-repo/releases/download/noble ./' \
             > "$MOUNT_DIR/etc/apt/sources.list.d/t2.list"
         GENERIC_KVER=$(ls "$MOUNT_DIR/lib/modules/" | head -1)
