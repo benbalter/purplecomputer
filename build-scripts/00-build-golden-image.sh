@@ -141,8 +141,8 @@ main() {
             > "$MOUNT_DIR/etc/apt/sources.list.d/t2.list"
         GENERIC_KVER=$(ls "$MOUNT_DIR/lib/modules/" | head -1)
         chroot "$MOUNT_DIR" apt-get update
-        chroot "$MOUNT_DIR" apt-get install -y linux-image-t2
-        log_info "Removing generic kernel $GENERIC_KVER (T2 build boots linux-image-t2)"
+        chroot "$MOUNT_DIR" apt-get install -y linux-t2
+        log_info "Removing generic kernel $GENERIC_KVER (T2 build boots linux-t2)"
         chroot "$MOUNT_DIR" apt-get purge -y \
             linux-image-generic "linux-image-$GENERIC_KVER" "linux-modules-$GENERIC_KVER" 2>/dev/null || true
         chroot "$MOUNT_DIR" apt-get autoremove --purge -y || true
