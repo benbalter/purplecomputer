@@ -1,0 +1,47 @@
+name: Build ISO
+
+on:
+  workflow_dispatch:
+    inputs:
+      with_backup:
+        description: "Also build the with-backup ISO variant"
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free up disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          swap-storage: true
+
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Prepare installer directory
+        run: sudo install -d -o "$USER" -g "$USER" /opt/purple-installer
+
+      - name: Build ISOs
+        env:
+          PURPLE_WITH_BACKUP_ISO: ${{ inputs.with_backup && '1' || '0' }}
+        run: just build
+
+      - name: Upload ISOs
+        uses: actions/upload-artifact@v4
+        with:
+          name: purple-installer-iso
+          path: |
+            /opt/purple-installer/output/*.iso
+            /opt/purple-installer/output/*.iso.sha256
+          if-no-files-found: error
+          retention-days: 7
