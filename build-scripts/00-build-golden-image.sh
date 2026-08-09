@@ -120,6 +120,30 @@ main() {
     mount --bind /dev "$MOUNT_DIR/dev"
     mount --bind /dev/pts "$MOUNT_DIR/dev/pts"
 
+    # Apple T2 Mac support (opt-in via PURPLE_T2=1). Swaps the generic kernel for
+    # the t2linux kernel (apple-bce keyboard/trackpad + Broadcom driver built in)
+    # so both the live ISO and the installed system boot on T2 Macs (2018-2020).
+    # Done before the KVER is derived below, so every KVER-keyed step downstream
+    # (modules-extra, update-initramfs) tracks the t2 kernel automatically.
+    # Wi-Fi firmware is deliberately NOT baked in (Apple/Broadcom firmware isn't
+    # redistributable): set it up at first boot with get-apple-firmware, or use
+    # USB-C Ethernet. The repo is a flat GitHub-releases apt repo; [trusted=yes]
+    # because the build image ships no gnupg to import its signing key. Gated so
+    # the default signed generic ISO for PC hardware is untouched.
+    if [ "${PURPLE_T2:-0}" = "1" ]; then
+        log_info "PURPLE_T2=1: installing t2linux kernel for Apple T2 Macs"
+        echo 'deb [trusted=yes] https://github.com/AdityaGarg8/t2-ubuntu-repo/releases/download/noble ./' \
+            > "$MOUNT_DIR/etc/apt/sources.list.d/t2.list"
+        GENERIC_KVER=$(ls "$MOUNT_DIR/lib/modules/" | head -1)
+        chroot "$MOUNT_DIR" apt-get update
+        chroot "$MOUNT_DIR" apt-get install -y linux-image-t2
+        log_info "Removing generic kernel $GENERIC_KVER (T2 build boots linux-image-t2)"
+        chroot "$MOUNT_DIR" apt-get purge -y \
+            linux-image-generic "linux-image-$GENERIC_KVER" "linux-modules-$GENERIC_KVER" 2>/dev/null || true
+        chroot "$MOUNT_DIR" apt-get autoremove --purge -y || true
+        echo apple-bce >> "$MOUNT_DIR/etc/initramfs-tools/modules"
+    fi
+
     # Install linux-modules-extra immediately, using debootstrap's sources.list
     # which points at the same base 'noble' repo. This guarantees the version matches
     # the kernel debootstrap installed. Must happen BEFORE we overwrite sources.list
@@ -127,7 +151,10 @@ main() {
     KVER=$(ls "$MOUNT_DIR/lib/modules/" | head -1)
     log_info "Kernel from debootstrap: $KVER"
     chroot "$MOUNT_DIR" apt-get update
-    chroot "$MOUNT_DIR" apt-get install -y "linux-modules-extra-$KVER"
+    # The t2 kernel bundles its modules; there is no linux-modules-extra-<t2kver>.
+    if [ "${PURPLE_T2:-0}" != "1" ]; then
+        chroot "$MOUNT_DIR" apt-get install -y "linux-modules-extra-$KVER"
+    fi
 
     # Prevent debconf from prompting interactively inside the chroot.
     # Without this, packages like console-setup fail when their postinst
@@ -289,14 +316,21 @@ SOURCES
     # Rebuild initrd to include casper scripts (installed above, casper-stop neutered)
     chroot "$MOUNT_DIR" update-initramfs -u -k "$KVER"
 
-    # Verify sound modules are present (fail the build if not)
+    # Verify sound modules are present (fail the build if not). This guards the
+    # generic build's linux-modules-extra install; the t2 kernel bundles its own
+    # modules with a different layout, so warn rather than fail there.
     log_info "Kernel version: $KVER"
     if [ ! -d "$MOUNT_DIR/lib/modules/$KVER/kernel/sound/pci" ]; then
-        echo "ERROR: Sound modules not found! linux-modules-extra may have failed to install."
-        ls -R "$MOUNT_DIR/lib/modules/$KVER/kernel/sound/" 2>/dev/null
-        exit 1
+        if [ "${PURPLE_T2:-0}" = "1" ]; then
+            log_info "WARNING: no sound/pci modules under the t2 kernel; verify audio on hardware"
+        else
+            echo "ERROR: Sound modules not found! linux-modules-extra may have failed to install."
+            ls -R "$MOUNT_DIR/lib/modules/$KVER/kernel/sound/" 2>/dev/null
+            exit 1
+        fi
+    else
+        log_info "Sound modules verified"
     fi
-    log_info "Sound modules verified"
 
     # Install JetBrainsMono Nerd Font (for UI icons like battery, volume, etc.)
     # Noto Color Emoji (installed via apt above) provides Unicode emoji

@@ -38,6 +38,11 @@ else
     ISO_TAG=""
 fi
 
+# T2 Mac variant: distinct filename so it's never confused with the generic ISO.
+if [ "${PURPLE_T2:-0}" = "1" ]; then
+    ISO_TAG="${ISO_TAG}-t2"
+fi
+
 create_live_boot_hook() {
     local HOOK_DIR="$1"
 

@@ -130,6 +130,7 @@ main() {
         -e "PURPLE_COMMIT=${PURPLE_COMMIT}" \
         -e "FAST_BUILD=${FAST_BUILD}" \
         -e "PURPLE_WITH_BACKUP_ISO=${PURPLE_WITH_BACKUP_ISO:-}" \
+        -e "PURPLE_T2=${PURPLE_T2:-}" \
         "$IMAGE_NAME" \
         /build/build-all.sh "$START_STEP"
 

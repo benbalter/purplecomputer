@@ -7,6 +7,10 @@ on:
         description: "Also build the with-backup ISO variant"
         type: boolean
         default: false
+      t2:
+        description: "Build the Apple T2 Mac variant (t2linux kernel)"
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -34,6 +38,7 @@ jobs:
       - name: Build ISOs
         env:
           PURPLE_WITH_BACKUP_ISO: ${{ inputs.with_backup && '1' || '0' }}
+          PURPLE_T2: ${{ inputs.t2 && '1' || '0' }}
         run: just build
 
       - name: Upload ISOs
