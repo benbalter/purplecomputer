@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Free up disk space
         uses: jlumbroso/free-disk-space@main
@@ -30,7 +30,7 @@ jobs:
           swap-storage: true
 
       - name: Install just
-        uses: extractions/setup-just@v2
+        uses: extractions/setup-just@v4
 
       - name: Prepare installer directory
         run: sudo install -d -o "$USER" -g "$USER" /opt/purple-installer
@@ -42,7 +42,7 @@ jobs:
         run: just build
 
       - name: Upload ISOs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: purple-installer-iso
           path: |
