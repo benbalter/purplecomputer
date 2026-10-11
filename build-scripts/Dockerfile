@@ -1,6 +1,6 @@
 # Build environment for Purple Computer
 # Architecture: Live boot + optional install
-FROM ubuntu:24.04
+FROM ubuntu:26.04
 
 # Override to a faster mirror only when it's healthy; archive.ubuntu.com is the reliable default.
 ARG APT_MIRROR=http://archive.ubuntu.com
